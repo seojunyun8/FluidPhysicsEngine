@@ -6,7 +6,18 @@ Python과 Pygame으로 만든 2D 입자 기반 유체 엔진이다. SPH로 물�
 
 ## 실행
 
-`FluidPhysicsEngine` 폴더에서 실행한다. Python 3.12 또는 3.13과 Pygame 2.6.1을 사용한다.
+Python 3.12 또는 3.13과 Pygame 2.6.1을 사용한다.
+
+### VS Code
+
+1. ZIP으로 받았다면 먼저 압축을 푼다. VS Code의 **파일 → 파일에서 작업 영역 열기**에서 `FluidPhysicsEngine.code-workspace`를 선택한다.
+2. 권장 확장인 Microsoft의 **Python**과 **Python Debugger**를 설치한다. `Ctrl+Shift+P` → `Python: Select Interpreter`에서 사용할 Python 3.12 또는 3.13을 선택한다.
+3. 선택한 환경에 Pygame이 없다면 VS Code에서 새 터미널을 열고 `python -m pip install -r requirements.txt`를 실행한다.
+4. `Ctrl+Shift+D`로 실행 및 디버그 패널을 열고 **Fluid Physics Lab - Dam Break** 또는 **Fluid Physics Lab - Buoyancy**를 선택한 다음 `F5`를 누른다.
+
+### 터미널
+
+`FluidPhysicsEngine` 폴더에서 실행한다.
 
 ```powershell
 python -m pip install -r requirements.txt
