@@ -1,12 +1,17 @@
 from dataclasses import dataclass
+from itertools import combinations
 from math import hypot
 from random import Random
 
-from .contacts import keep_in_tank
+from .contacts import collide_with_circle, keep_in_tank
 from .particles import Particle
+from .rigid import CircleBody
 from .settings import Settings
 from .spatial_grid import SpatialGrid
 from .sph import SphSolver
+
+
+MAX_BODIES = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,8 +26,11 @@ class World:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.particles: list[Particle] = []
+        self.bodies: list[CircleBody] = []
+        particle_mass = settings.particle_mass
         self.grid = SpatialGrid(settings.smoothing_radius)
-        self.solver = SphSolver(settings, settings.particle_mass)
+        self.solver = SphSolver(settings, particle_mass)
+        self.particle_inverse_mass = 1.0 / particle_mass
         self.random = Random(29)
 
     def seed_block(self, left: float, top: float, columns: int, rows: int) -> None:
@@ -36,6 +44,15 @@ class World:
         spread = self.settings.spacing * 0.55
         for dx in (-spread, spread):
             self._add_particle(x + dx, y + self.random.uniform(-spread, spread), dx * 3.0, 1.0)
+
+    def drop_body(self, x: float, y: float) -> None:
+        if len(self.bodies) >= MAX_BODIES:
+            return
+        body = CircleBody(x, y)
+        keep_in_tank(body, self.settings, radius=body.radius)
+        if any(hypot(body.x - other.x, body.y - other.y) < body.radius + other.radius for other in self.bodies):
+            return
+        self.bodies.append(body)
 
     def _add_particle(self, x: float, y: float, vx: float = 0.0, vy: float = 0.0) -> None:
         settings = self.settings
@@ -71,3 +88,25 @@ class World:
             particle.x += particle.vx * dt
             particle.y += particle.vy * dt
             keep_in_tank(particle, settings)
+
+        for body in self.bodies:
+            body.vy += settings.gravity * dt
+            body.x += body.vx * dt
+            body.y += body.vy * dt
+            keep_in_tank(body, settings, radius=body.radius)
+        if self.bodies:
+            self._resolve_body_contacts()
+
+    def _resolve_body_contacts(self) -> None:
+        settings = self.settings
+        for _ in range(2):
+            for first, second in combinations(self.bodies, 2):
+                collide_with_circle(first, second, first.radius + second.radius, first.inverse_mass)
+            self.grid.rebuild(self.particles)
+            for body in self.bodies:
+                keep_in_tank(body, settings, radius=body.radius)
+                limit = body.radius + settings.particle_radius
+                for particle in self.grid.nearby(body.x, body.y, limit):
+                    if collide_with_circle(particle, body, limit, self.particle_inverse_mass):
+                        keep_in_tank(particle, settings)
+                keep_in_tank(body, settings, radius=body.radius)

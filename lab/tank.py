@@ -31,5 +31,11 @@ def draw_tank(canvas: pygame.Surface, world: World) -> None:
         shade = WATER_SHADES[min(len(WATER_SHADES) - 1, int(speed_squared * 0.43))]
         pygame.draw.circle(canvas, shade, center, radius)
 
+    for body in world.bodies:
+        center = (TANK.x + round(body.x * scale), TANK.y + round(body.y * scale))
+        body_radius = round(body.radius * scale)
+        pygame.draw.circle(canvas, (221, 134, 60), center, body_radius)
+        pygame.draw.circle(canvas, (255, 201, 130), center, body_radius, 2)
+
     canvas.set_clip(None)
     pygame.draw.rect(canvas, (145, 150, 158), TANK, 1)

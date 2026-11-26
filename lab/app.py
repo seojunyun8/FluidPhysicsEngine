@@ -10,13 +10,20 @@ from .tank import draw_tank
 
 
 TITLE = "Fluid Physics Lab"
+DRAG_THRESHOLD = 5
 
 
 class Lab:
     def __init__(self) -> None:
         self.screen = pygame.display.set_mode(SIZE, pygame.RESIZABLE)
-        pygame.display.set_caption(f"{TITLE} - Press 1 to start")
+        pygame.display.set_caption(f"{TITLE} - Press 1 or click to start")
         self.canvas = pygame.Surface(SIZE).convert()
+        pygame.font.init()
+        font = pygame.font.Font(None, 23)
+        self.controls = font.render(
+            "Click: drop a ball   |   Drag: stir   |   Right mouse: add water   |   1: restart",
+            True, (175, 180, 188),
+        )
         self.world = create_tank()
         self.running = True
         self.started = False
@@ -24,6 +31,7 @@ class Lab:
         self.emit_remaining = 0.0
         self.brush = False
         self.emitter = False
+        self.press_point: tuple[int, int] | None = None
         self.last_brush_point: tuple[int, int] | None = None
 
     def handle(self, event: pygame.event.Event) -> None:
@@ -37,21 +45,37 @@ class Lab:
                     self.world = create_tank()
                 self.started = True
                 self.accumulator = self.emit_remaining = 0.0
+                self.brush = self.emitter = False
+                self.press_point = None
                 self.last_brush_point = None
                 pygame.display.set_caption(TITLE)
         elif event.type == pygame.WINDOWFOCUSLOST:
             self.brush = self.emitter = False
+            self.press_point = None
             self.last_brush_point = None
         elif event.type == pygame.MOUSEBUTTONDOWN:
             point = logical_point(event.pos, fit_canvas(self.screen.get_size()))
             if event.button == 1:
-                self.brush = TANK.collidepoint(point)
-                self.last_brush_point = point if self.brush else None
+                self.press_point = point if TANK.collidepoint(point) else None
             elif event.button == 3:
                 self.emitter = TANK.collidepoint(point)
                 self.emit_remaining = 0.0
+        elif event.type == pygame.MOUSEMOTION and self.press_point is not None and not self.brush:
+            point = logical_point(event.pos, fit_canvas(self.screen.get_size()))
+            if hypot(point[0] - self.press_point[0], point[1] - self.press_point[1]) >= DRAG_THRESHOLD:
+                self.brush = True
+                self.last_brush_point = self.press_point
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
+                point = logical_point(event.pos, fit_canvas(self.screen.get_size()))
+                if (self.press_point is not None and not self.brush and TANK.collidepoint(point)
+                        and hypot(point[0] - self.press_point[0], point[1] - self.press_point[1]) < DRAG_THRESHOLD):
+                    scale = TANK.width / self.world.settings.width
+                    self.world.drop_body((point[0] - TANK.left) / scale, (point[1] - TANK.top) / scale)
+                    if not self.started:
+                        self.started = True
+                        pygame.display.set_caption(TITLE)
+                self.press_point = None
                 self.brush = False
                 self.last_brush_point = None
             elif event.button == 3:
@@ -90,6 +114,7 @@ class Lab:
 
     def draw(self) -> None:
         draw_tank(self.canvas, self.world)
+        self.canvas.blit(self.controls, (TANK.left, TANK.bottom + 15))
         frame = fit_canvas(self.screen.get_size())
         if self.screen.get_size() == SIZE:
             self.screen.blit(self.canvas, (0, 0))
