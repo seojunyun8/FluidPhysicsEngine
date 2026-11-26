@@ -1,19 +1,8 @@
 import pygame
 
 
-SIZE = (1200, 770)
-TANK = pygame.Rect(28, 144, 840, 504)
-PANEL = pygame.Rect(890, 96, 282, 618)
-
-BUTTONS = {
-    "dam": pygame.Rect(28, 96, 143, 36),
-    "float": pygame.Rect(179, 96, 143, 36),
-    "pause": pygame.Rect(947, 32, 108, 38),
-    "reset": pygame.Rect(1063, 32, 109, 38),
-    "flow": pygame.Rect(909, 387, 120, 34),
-    "pressure": pygame.Rect(1033, 387, 120, 34),
-    "buoyancy": pygame.Rect(909, 473, 244, 36),
-}
+SIZE = (960, 620)
+TANK = pygame.Rect(40, 46, 880, 528)
 
 
 def fit_canvas(window_size: tuple[int, int]) -> pygame.Rect:

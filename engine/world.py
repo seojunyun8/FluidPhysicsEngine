@@ -1,15 +1,12 @@
 from dataclasses import dataclass
-from itertools import combinations
 from math import hypot
 from random import Random
 
-from .contacts import collide_particle, keep_in_tank, separate_bodies
-from .coupling import exchange_forces
+from .contacts import keep_in_tank
 from .particles import Particle
-from .rigid import CircleBody
 from .settings import Settings
 from .spatial_grid import SpatialGrid
-from .sph import FluidMetrics, SphSolver
+from .sph import SphSolver
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,14 +20,9 @@ class Stir:
 class World:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.mass = settings.particle_mass
         self.particles: list[Particle] = []
-        self.bodies: list[CircleBody] = []
         self.grid = SpatialGrid(settings.smoothing_radius)
-        self.solver = SphSolver(settings, self.mass)
-        self.metrics = FluidMetrics()
-        self.buoyancy = True
-        self.steps = 0
+        self.solver = SphSolver(settings, settings.particle_mass)
         self.random = Random(29)
 
     def seed_block(self, left: float, top: float, columns: int, rows: int) -> None:
@@ -51,8 +43,6 @@ class World:
         if (len(self.particles) >= settings.max_particles
                 or not (radius <= x <= settings.width - radius and radius <= y <= settings.height - radius)):
             return
-        if any(hypot(x - body.x, y - body.y) < body.radius + radius for body in self.bodies):
-            return
         self.particles.append(Particle(x, y, vx, vy))
 
     def _stir(self, stir: Stir) -> None:
@@ -66,7 +56,7 @@ class World:
 
     def measure_fluid(self) -> None:
         self.grid.rebuild(self.particles)
-        self.metrics = self.solver.evaluate(self.particles, self.grid)
+        self.solver.evaluate(self.particles, self.grid)
 
     def step(self, stir: Stir | None = None) -> None:
         settings = self.settings
@@ -75,32 +65,9 @@ class World:
         if stir is not None:
             self._stir(stir)
 
-        moving_bodies = [body for body in self.bodies if not body.fixed]
-        for body in moving_bodies:
-            fx, fy = exchange_forces(body, self.grid, settings, self.mass, self.buoyancy)
-            inverse_mass = body.inverse_mass
-            body.vx += fx * inverse_mass * dt
-            body.vy += (fy * inverse_mass + settings.gravity) * dt
-            body.x += body.vx * dt
-            body.y += body.vy * dt
-            keep_in_tank(body, body.radius, settings, 0.14)
-
-        for first, second in combinations(self.bodies, 2):
-            separate_bodies(first, second)
-        for body in moving_bodies:
-            keep_in_tank(body, body.radius, settings, 0.14)
-
         for particle in self.particles:
             particle.vx += particle.ax * dt
             particle.vy += particle.ay * dt
             particle.x += particle.vx * dt
             particle.y += particle.vy * dt
-            keep_in_tank(particle, settings.particle_radius, settings, 0.22)
-            for _ in range(3):
-                contacted = False
-                for body in self.bodies:
-                    contacted |= collide_particle(particle, body, self.mass, settings)
-                if not contacted:
-                    break
-                keep_in_tank(particle, settings.particle_radius, settings, 0.22)
-        self.steps += 1
+            keep_in_tank(particle, settings)

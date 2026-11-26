@@ -6,15 +6,15 @@ from math import ceil, pi
 class Settings:
     width: float = 12.0
     height: float = 7.2
-    spacing: float = 0.30
-    particle_radius: float = 0.12
-    smoothing_radius: float = 0.57
+    spacing: float = 0.18
+    particle_radius: float = 0.063
+    smoothing_radius: float = 0.35
     rest_density: float = 1.0
     stiffness: float = 78.0
-    viscosity: float = 0.12
+    viscosity: float = 0.065
     gravity: float = 9.81
-    dt: float = 1.0 / 100.0
-    max_particles: int = 750
+    dt: float = 1.0 / 120.0
+    max_particles: int = 1100
 
     @property
     def particle_mass(self) -> float:
